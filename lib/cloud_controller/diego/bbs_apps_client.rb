@@ -19,21 +19,14 @@ module VCAP::CloudController
 
       def desire_app(lrp)
         @logger.info("Desiring lrp ", lrp)
-        environment_variables = JSON.parse(lrp.environment_variables)
-        body = {
-          name: lrp.name,
-          image: lrp.docker_image,
-          command: Array(lrp.command),
-          env: environment_variables,
-          targetInstances: 1
-        }
+        body = Diego::Protocol.new.desire_app_message(lrp, 60)
 
-        response = @client.post("http://replace-me.com/v1/lrp", body)
+        response = @client.post("http://cube.service.cf.internal:8076/v1/lrp", body)
         @logger.info(response)
       end
       
       def fetch_scheduling_infos
-        response = @client.get("http://replace-me.com/v1/lrps")
+        response = @client.get("http://cube.service.cf.internal:8076/v1/lrps")
         @logger.info(response)
         infos = JSON.parse(response.body)
         infos.to_o.desired_lrp_scheduling_infos
