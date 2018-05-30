@@ -1,11 +1,12 @@
 require 'json'
+require 'multi_json'
 require 'ostruct'
 require 'httpclient'
 
-class Hash
-  def to_o
-    JSON.parse to_json, object_class: OpenStruct
-  end
+def to_recursive_ostruct(hash)
+  OpenStruct.new(hash.each_with_object({}) do |(key, val), memo|
+    memo[key] = val.is_a?(Hash) ? to_recursive_ostruct(val) : val
+  end)
 end
 
 module VCAP::CloudController
@@ -19,17 +20,19 @@ module VCAP::CloudController
 
       def desire_app(lrp)
         @logger.info("Desiring lrp ", lrp)
-        body = Diego::Protocol.new.desire_app_message(lrp, 60)
-
+        raw_body = Diego::Protocol.new.desire_app_message(lrp, 60)
+        body = MultiJson.dump(raw_body)
         response = @client.post("http://cube.service.cf.internal:8076/v1/lrp", body)
         @logger.info(response)
       end
-      
+
       def fetch_scheduling_infos
         response = @client.get("http://cube.service.cf.internal:8076/v1/lrps")
-        @logger.info(response)
-        infos = JSON.parse(response.body)
-        infos.to_o.desired_lrp_scheduling_infos
+        info_hash = JSON.parse(response.body)
+        info_obj = OpenStruct.new(info_hash)
+        infos = info_obj.desired_lrp_scheduling_infos.map { |d| to_recursive_ostruct(d) }
+        @logger.info(infos)
+        infos
       end
 
       def update_app(process_guid, lrp_update) #this should be a no-op
