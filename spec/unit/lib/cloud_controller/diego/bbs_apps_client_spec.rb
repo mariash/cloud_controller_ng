@@ -2,72 +2,95 @@ require 'spec_helper'
 
 module VCAP::CloudController::Diego
   RSpec.describe BbsAppsClient do
-    subject(:client) { BbsAppsClient.new(bbs_client) }
+    subject(:client) {         BbsAppsClient.new(bbs_client, config) }
+    let(:config) { VCAP::CloudController::Config.new({ default_health_check_timeout: 99 }) }
 
     describe '#desire_app' do
-      let(:bbs_client) { instance_double(::Diego::Client, desire_lrp: lurp_response) }
+      let(:bbs_client) { instance_double(::Diego::Client, desire_lrp: lrp_response) }
+      let(:lrp) { ::Diego::Bbs::Models::DesiredLRP.new }
+      let(:process) { VCAP::CloudController::ProcessModel.new }
+      let(:lrp_response) { ::Diego::Bbs::Models::DesiredLRPLifecycleResponse.new(error: lifecycle_error) }
+      let(:lifecycle_error) { nil }
 
-      let(:lurp) { ::Diego::Bbs::Models::DesiredLRP.new }
-      let(:lurp_response) { ::Diego::Bbs::Models::DesiredLRPLifecycleResponse.new(error: error) }
-      let(:error) { nil }
+      let(:app_recipe_builder) { instance_double(AppRecipeBuilder, build_app_lrp: build_lrp) }
+      let(:build_lrp) { instance_double(::Diego::Bbs::Models::DesiredLRP) }
 
-      it 'sends the lrp to diego' do
-        client.desire_app(lurp)
-        expect(bbs_client).to have_received(:desire_lrp).with(lurp)
+      before do
+        allow(AppRecipeBuilder).to receive(:new).with(config: config, process: process).and_return(app_recipe_builder)
       end
 
-      context 'when bbs client errors' do
+      context 'app_recipe_builder succeeds' do
         before do
-          allow(bbs_client).to receive(:desire_lrp).and_raise(::Diego::Error.new('boom'))
+          allow(app_recipe_builder).to receive(:build_app_lrp).and_return(lrp)
+        end
+        it 'sends the lrp to diego' do
+          client.desire_app(process)
+          expect(bbs_client).to have_received(:desire_lrp).with(lrp)
         end
 
-        it 'raises an api error' do
-          expect {
-            client.desire_app(lurp)
-          }.to raise_error(CloudController::Errors::ApiError, /boom/) do |e|
-            expect(e.name).to eq('RunnerUnavailable')
+        context 'when bbs client errors' do
+          before do
+            allow(bbs_client).to receive(:desire_lrp).and_raise(::Diego::Error.new('boom'))
+          end
+
+          it 'raises an api error' do
+            expect {
+              client.desire_app(process)
+            }.to raise_error(CloudController::Errors::ApiError, /boom/) do |e|
+              expect(e.name).to eq('RunnerUnavailable')
+            end
+          end
+        end
+
+        context 'when the bbs response contains a conflict error' do
+          let(:lifecycle_error) { ::Diego::Bbs::Models::Error.new(type: ::Diego::Bbs::Models::Error::Type::ResourceConflict) }
+
+          it 'returns false' do
+            expect { client.desire_app(process) }.not_to raise_error
+          end
+        end
+
+        context 'when the bbs response contains an invalid request error' do
+          let(:lifecycle_error) { ::Diego::Bbs::Models::Error.new(type: ::Diego::Bbs::Models::Error::Type::InvalidRequest, message: 'bad request') }
+
+          it 'raises an RunnerInvalidRequest api error' do
+            expect {
+              client.desire_app(process)
+            }.to raise_error(CloudController::Errors::ApiError, /bad request/) do |e|
+              expect(e.name).to eq('RunnerInvalidRequest')
+            end
+          end
+        end
+
+        context 'when bbs returns a response with any other error' do
+          let(:lifecycle_error) { ::Diego::Bbs::Models::Error.new(message: 'error message') }
+
+          it 'raises an api error' do
+            expect {
+              client.desire_app(process)
+            }.to raise_error(CloudController::Errors::ApiError, /error message/) do |e|
+              expect(e.name).to eq('RunnerError')
+            end
           end
         end
       end
+      context 'app_recipe_builder fails' do
+        let(:api_error) { CloudController::Errors::ApiError.new_from_details('RunnerError', 'bad error!') }
 
-      context 'when the bbs response contains a conflict error' do
-        let(:error) { ::Diego::Bbs::Models::Error.new(type: ::Diego::Bbs::Models::Error::Type::ResourceConflict) }
-
-        it 'returns false' do
-          expect { client.desire_app(lurp) }.not_to raise_error
+        before do
+          allow(app_recipe_builder).to receive(:build_app_lrp).and_raise(api_error)
         end
-      end
 
-      context 'when the bbs response contains an invalid request error' do
-        let(:error) { ::Diego::Bbs::Models::Error.new(type: ::Diego::Bbs::Models::Error::Type::InvalidRequest, message: 'bad request') }
-
-        it 'raises an RunnerInvalidRequest api error' do
-          expect {
-            client.desire_app(lurp)
-          }.to raise_error(CloudController::Errors::ApiError, /bad request/) do |e|
-            expect(e.name).to eq('RunnerInvalidRequest')
-          end
-        end
-      end
-
-      context 'when bbs returns a response with any other error' do
-        let(:error) { ::Diego::Bbs::Models::Error.new(message: 'error message') }
-
-        it 'raises an api error' do
-          expect {
-            client.desire_app(lurp)
-          }.to raise_error(CloudController::Errors::ApiError, /error message/) do |e|
-            expect(e.name).to eq('RunnerError')
-          end
+        it 'passes the error' do
+          expect { client.desire_app(process) }.to raise_error(CloudController::Errors::ApiError)
         end
       end
     end
-
     describe '#stop_app' do
       let(:bbs_client) { instance_double(::Diego::Client) }
-      let(:bbs_response) { ::Diego::Bbs::Models::DesiredLRPLifecycleResponse.new(error: error) }
+      let(:bbs_response) { ::Diego::Bbs::Models::DesiredLRPLifecycleResponse.new(error: lifecycle_error) }
       let(:process_guid) { 'process-guid' }
-      let(:error) { nil }
+      let(:lifecycle_error) { nil }
 
       before do
         allow(bbs_client).to receive(:remove_desired_lrp).with('process-guid').and_return(bbs_response)
@@ -79,7 +102,7 @@ module VCAP::CloudController::Diego
       end
 
       context 'when the bbs response contains a resource not found error' do
-        let(:error) { ::Diego::Bbs::Models::Error.new(type: ::Diego::Bbs::Models::Error::Type::ResourceNotFound) }
+        let(:lifecycle_error) { ::Diego::Bbs::Models::Error.new(type: ::Diego::Bbs::Models::Error::Type::ResourceNotFound) }
 
         it 'returns nil' do
           expect(client.stop_app(process_guid)).to be_nil
@@ -87,7 +110,7 @@ module VCAP::CloudController::Diego
       end
 
       context 'when the bbs response contains any other error' do
-        let(:error) { ::Diego::Bbs::Models::Error.new(type: ::Diego::Bbs::Models::Error::Type::UnknownError, message: 'error message') }
+        let(:lifecycle_error) { ::Diego::Bbs::Models::Error.new(type: ::Diego::Bbs::Models::Error::Type::UnknownError, message: 'error message') }
 
         it 'raises an api error' do
           expect {
@@ -115,11 +138,11 @@ module VCAP::CloudController::Diego
 
     describe '#stop_index' do
       let(:bbs_client) { instance_double(::Diego::Client) }
-      let(:bbs_response) { ::Diego::Bbs::Models::ActualLRPLifecycleResponse.new(error: error) }
+      let(:bbs_response) { ::Diego::Bbs::Models::ActualLRPLifecycleResponse.new(error: lifecycle_error) }
       let(:process_guid) { 'process-guid' }
       let(:index) { 9 }
       let(:actual_lrp_key) { ::Diego::Bbs::Models::ActualLRPKey.new(process_guid: process_guid, index: index, domain: APP_LRP_DOMAIN) }
-      let(:error) { nil }
+      let(:lifecycle_error) { nil }
 
       before do
         allow(bbs_client).to receive(:retire_actual_lrp).with(actual_lrp_key).and_return(bbs_response)
@@ -131,7 +154,7 @@ module VCAP::CloudController::Diego
       end
 
       context 'when the bbs response contains a resource not found error' do
-        let(:error) { ::Diego::Bbs::Models::Error.new(type: ::Diego::Bbs::Models::Error::Type::ResourceNotFound) }
+        let(:lifecycle_error) { ::Diego::Bbs::Models::Error.new(type: ::Diego::Bbs::Models::Error::Type::ResourceNotFound) }
 
         it 'returns nil' do
           expect(client.stop_index(process_guid, index)).to be_nil
@@ -139,7 +162,7 @@ module VCAP::CloudController::Diego
       end
 
       context 'when the bbs response contains any other error' do
-        let(:error) { ::Diego::Bbs::Models::Error.new(type: ::Diego::Bbs::Models::Error::Type::UnknownError, message: 'error message') }
+        let(:lifecycle_error) { ::Diego::Bbs::Models::Error.new(type: ::Diego::Bbs::Models::Error::Type::UnknownError, message: 'error message') }
 
         it 'raises an api error' do
           expect {
@@ -167,10 +190,10 @@ module VCAP::CloudController::Diego
 
     describe '#get_app' do
       let(:bbs_client) { instance_double(::Diego::Client) }
-      let(:bbs_response) { ::Diego::Bbs::Models::DesiredLRPResponse.new(desired_lrp: desired_lrp, error: error) }
+      let(:bbs_response) { ::Diego::Bbs::Models::DesiredLRPResponse.new(desired_lrp: desired_lrp, error: lifecycle_error) }
       let(:process_guid) { 'process-guid' }
       let(:desired_lrp) { ::Diego::Bbs::Models::DesiredLRP.new(process_guid: process_guid) }
-      let(:error) { nil }
+      let(:lifecycle_error) { nil }
 
       before do
         allow(bbs_client).to receive(:desired_lrp_by_process_guid).with('process-guid').and_return(bbs_response)
@@ -182,7 +205,7 @@ module VCAP::CloudController::Diego
       end
 
       context 'when the bbs response contains a resource not found error' do
-        let(:error) { ::Diego::Bbs::Models::Error.new(type: ::Diego::Bbs::Models::Error::Type::ResourceNotFound) }
+        let(:lifecycle_error) { ::Diego::Bbs::Models::Error.new(type: ::Diego::Bbs::Models::Error::Type::ResourceNotFound) }
 
         it 'returns nil' do
           expect(client.get_app(process_guid)).to be_nil
@@ -190,7 +213,7 @@ module VCAP::CloudController::Diego
       end
 
       context 'when the bbs response contains any other error' do
-        let(:error) { ::Diego::Bbs::Models::Error.new(type: ::Diego::Bbs::Models::Error::Type::UnknownError, message: 'error message') }
+        let(:lifecycle_error) { ::Diego::Bbs::Models::Error.new(type: ::Diego::Bbs::Models::Error::Type::UnknownError, message: 'error message') }
 
         it 'raises an api error' do
           expect {
@@ -218,8 +241,8 @@ module VCAP::CloudController::Diego
 
     describe '#update_app' do
       let(:bbs_client) { instance_double(::Diego::Client) }
-      let(:bbs_response) { ::Diego::Bbs::Models::DesiredLRPLifecycleResponse.new(error: error) }
-      let(:error) { nil }
+      let(:bbs_response) { ::Diego::Bbs::Models::DesiredLRPLifecycleResponse.new(error: lifecycle_error) }
+      let(:lifecycle_error) { nil }
 
       let(:process_guid) { 'process-guid' }
       let(:lrp_update) { ::Diego::Bbs::Models::DesiredLRPUpdate.new(instances: 3) }
@@ -234,7 +257,7 @@ module VCAP::CloudController::Diego
       end
 
       context 'when the bbs response contains a conflict error' do
-        let(:error) { ::Diego::Bbs::Models::Error.new(type: ::Diego::Bbs::Models::Error::Type::ResourceConflict) }
+        let(:lifecycle_error) { ::Diego::Bbs::Models::Error.new(type: ::Diego::Bbs::Models::Error::Type::ResourceConflict) }
 
         it 'returns false' do
           expect { client.update_app(process_guid, lrp_update) }.not_to raise_error
@@ -242,7 +265,7 @@ module VCAP::CloudController::Diego
       end
 
       context 'when the bbs response contains an invalid request error' do
-        let(:error) { ::Diego::Bbs::Models::Error.new(type: ::Diego::Bbs::Models::Error::Type::InvalidRequest, message: 'bad request') }
+        let(:lifecycle_error) { ::Diego::Bbs::Models::Error.new(type: ::Diego::Bbs::Models::Error::Type::InvalidRequest, message: 'bad request') }
 
         it 'raises an RunnerInvalidRequest api error' do
           expect {
@@ -254,7 +277,7 @@ module VCAP::CloudController::Diego
       end
 
       context 'when the bbs response contains any other error' do
-        let(:error) { ::Diego::Bbs::Models::Error.new(type: ::Diego::Bbs::Models::Error::Type::UnknownError, message: 'error message') }
+        let(:lifecycle_error) { ::Diego::Bbs::Models::Error.new(type: ::Diego::Bbs::Models::Error::Type::UnknownError, message: 'error message') }
 
         it 'raises an api error' do
           expect {
@@ -282,9 +305,9 @@ module VCAP::CloudController::Diego
 
     describe '#fetch_scheduling_infos' do
       let(:bbs_client) { instance_double(::Diego::Client) }
-      let(:bbs_response) { ::Diego::Bbs::Models::DesiredLRPSchedulingInfosResponse.new(desired_lrp_scheduling_infos: lrp_scheduling_infos, error: error) }
+      let(:bbs_response) { ::Diego::Bbs::Models::DesiredLRPSchedulingInfosResponse.new(desired_lrp_scheduling_infos: lrp_scheduling_infos, error: lifecycle_error) }
       let(:lrp_scheduling_infos) { [::Diego::Bbs::Models::DesiredLRPSchedulingInfo.new] }
-      let(:error) { nil }
+      let(:lifecycle_error) { nil }
 
       before do
         allow(bbs_client).to receive(:desired_lrp_scheduling_infos).with(APP_LRP_DOMAIN).and_return(bbs_response)
@@ -296,7 +319,7 @@ module VCAP::CloudController::Diego
       end
 
       context 'when the bbs response contains any error' do
-        let(:error) { ::Diego::Bbs::Models::Error.new(type: ::Diego::Bbs::Models::Error::Type::UnknownError, message: 'error message') }
+        let(:lifecycle_error) { ::Diego::Bbs::Models::Error.new(type: ::Diego::Bbs::Models::Error::Type::UnknownError, message: 'error message') }
 
         it 'raises an api error' do
           expect {
@@ -324,8 +347,8 @@ module VCAP::CloudController::Diego
 
     describe '#bump_freshness' do
       let(:bbs_client) { instance_double(::Diego::Client) }
-      let(:bbs_response) { ::Diego::Bbs::Models::UpsertDomainResponse.new(error: error) }
-      let(:error) { nil }
+      let(:bbs_response) { ::Diego::Bbs::Models::UpsertDomainResponse.new(error: lifecycle_error) }
+      let(:lifecycle_error) { nil }
 
       before do
         allow(bbs_client).to receive(:upsert_domain).with(domain: APP_LRP_DOMAIN, ttl: APP_LRP_DOMAIN_TTL).and_return(bbs_response)
@@ -337,7 +360,7 @@ module VCAP::CloudController::Diego
       end
 
       context 'when the bbs response contains any other error' do
-        let(:error) { ::Diego::Bbs::Models::Error.new(type: ::Diego::Bbs::Models::Error::Type::UnknownError, message: 'error message') }
+        let(:lifecycle_error) { ::Diego::Bbs::Models::Error.new(type: ::Diego::Bbs::Models::Error::Type::UnknownError, message: 'error message') }
 
         it 'raises an api error' do
           expect {
