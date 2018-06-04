@@ -1,12 +1,15 @@
 module VCAP::CloudController
   module Diego
     class BbsAppsClient
-      def initialize(client)
+      def initialize(client, config=nil)
         @client = client
+        @config = config
       end
 
-      def desire_app(lrp)
-        logger.info('desire.app.request', process_guid: lrp.process_guid)
+      def desire_app(process)
+        logger.info('desire.app.request', process_guid: process.guid)
+
+        lrp = AppRecipeBuilder.new(config: @config, process: process).build_app_lrp
 
         handle_diego_errors(lrp.process_guid) do
           response = @client.desire_lrp(lrp)
