@@ -1,11 +1,24 @@
+require 'uri'
 require 'httpclient'
 
 module OPI
   class Client
-    def desire_lrp
+    def initialize(opi_url)
+      @opi_url = URI(opi_url)
+    end
+
+    def desire_lrp(lrp)
       client = HTTPClient.new
-      client.put("http://eirini.service.cf.internal:8076/lrp")
+      @opi_url.path = "/apps/#{lrp.process_guid}"
+      client.put(@opi_url,
+        body: {
+          imageUrl: lrp.image_url,
+          command: lrp.command,
+          env: lrp.env,
+          targetInstances: lrp.target_instances
+        }.to_json
+        # TODO: Note that in the spike we had to use MultiJSON in order to get around a strange encoding issue
+      )
     end
   end
 end
-
