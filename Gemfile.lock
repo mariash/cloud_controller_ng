@@ -238,6 +238,7 @@ GEM
     loofah (2.2.2)
       crass (~> 1.0.2)
       nokogiri (>= 1.5.9)
+    lumberjack (1.0.13)
     machinist (1.0.6)
     membrane (1.1.0)
     memoist (0.16.0)
@@ -269,6 +270,9 @@ GEM
     newrelic_rpm (5.3.0.346)
     nokogiri (1.8.4)
       mini_portile2 (~> 2.3.0)
+    notiffany (0.1.1)
+      nenv (~> 0.1)
+      shellany (~> 0.0)
     os (0.9.6)
     palm_civet (1.1.0)
     parallel (1.12.1)
@@ -379,6 +383,7 @@ GEM
     scientist (1.1.1)
     sequel (4.49.0)
     sexp_processor (4.7.0)
+    shellany (0.0.1)
     signet (0.8.1)
       addressable (~> 2.3)
       faraday (~> 0.9)
@@ -468,6 +473,8 @@ DEPENDENCIES
   fog-google
   fog-local
   fog-openstack
+  guard
+  guard-rspec
   hashdiff
   httpclient
   i18n
