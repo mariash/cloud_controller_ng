@@ -220,6 +220,20 @@ GEM
       google-protobuf (~> 3.1)
       googleapis-common-protos-types (~> 1.0.0)
       googleauth (>= 0.5.1, < 0.7)
+    guard (2.14.2)
+      formatador (>= 0.2.4)
+      listen (>= 2.7, < 4.0)
+      lumberjack (>= 1.0.12, < 2.0)
+      nenv (~> 0.1)
+      notiffany (~> 0.0)
+      pry (>= 0.9.12)
+      shellany (~> 0.0)
+      thor (>= 0.18.1)
+    guard-compat (1.2.1)
+    guard-rspec (4.7.3)
+      guard (~> 2.1)
+      guard-compat (~> 1.1)
+      rspec (>= 2.99.0, < 4.0)
     hashdiff (0.3.7)
     http-cookie (1.0.3)
       domain_name (~> 0.5)
@@ -245,6 +259,7 @@ GEM
     loofah (2.2.2)
       crass (~> 1.0.2)
       nokogiri (>= 1.5.9)
+    lumberjack (1.0.13)
     machinist (1.0.6)
     membrane (1.1.0)
     memoist (0.16.0)
@@ -270,12 +285,16 @@ GEM
     multipart-post (2.0.0)
     mustache (0.99.8)
     mysql2 (0.4.10)
+    nenv (0.3.0)
     net-ssh (4.2.0)
     netaddr (1.5.1)
     netrc (0.11.0)
     newrelic_rpm (5.0.0.342)
     nokogiri (1.8.2)
       mini_portile2 (~> 2.3.0)
+    notiffany (0.1.1)
+      nenv (~> 0.1)
+      shellany (~> 0.0)
     os (0.9.6)
     palm_civet (1.1.0)
     parallel (1.12.1)
@@ -379,6 +398,7 @@ GEM
     scientist (1.1.1)
     sequel (4.49.0)
     sexp_processor (4.7.0)
+    shellany (0.0.1)
     signet (0.8.1)
       addressable (~> 2.3)
       faraday (~> 0.9)
@@ -465,6 +485,8 @@ DEPENDENCIES
   fog-google
   fog-local
   fog-openstack
+  guard
+  guard-rspec
   hashdiff
   httpclient
   i18n
@@ -520,4 +542,4 @@ DEPENDENCIES
   yajl-ruby
 
 BUNDLED WITH
-   1.16.1
+   1.16.2
