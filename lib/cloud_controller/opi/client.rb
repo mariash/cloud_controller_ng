@@ -20,5 +20,12 @@ module OPI
         # TODO: Note that in the spike we had to use MultiJSON in order to get around a strange encoding issue
       )
     end
+
+    def desired_lrps
+      client = HTTPClient.new
+      @opi_url.path = '/apps'
+
+      client.get(@opi_url)
+    end
   end
 end
