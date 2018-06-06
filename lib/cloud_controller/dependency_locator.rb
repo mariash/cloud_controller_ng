@@ -373,14 +373,7 @@ module CloudController
     end
 
     def build_bbs_apps_client
-      bbs_client = ::Diego::Client.new(
-        url: config.get(:diego, :bbs, :url),
-        ca_cert_file: config.get(:diego, :bbs, :ca_file),
-        client_cert_file: config.get(:diego, :bbs, :cert_file),
-        client_key_file: config.get(:diego, :bbs, :key_file),
-      )
-
-      VCAP::CloudController::Diego::BbsAppsClient.new(bbs_client)
+      ::OPI::Client.new('http://eirini.service.cf.internal:8090')
     end
 
     def build_bbs_task_client
