@@ -44,48 +44,16 @@ module OPI
     end
     describe '#fetch_scheduling_infos' do
       let(:opi_url) { 'http://opi.service.cf.internal:8077' }
-      let(:lrp) { double(lrps: [
-        double(
-          process_guid: 'guid_1234',
-          imageUrl: 'http://example.org/image1234',
-          command: ['ls', ' -la'],
-          env: {
-           'PORT' => 234,
-           'FOO' => 'BAR'
-         },
-          targetInstances: 4
-        ),
-        double(
-          process_guid: 'guid_5678',
-          imageUrl: 'http://example.org/image5678',
-          command: ['rm', '-rf', '/'],
-          env: {
-            'BAZ' => 'BAR'
-          },
-          targetInstances: 2
-        )
-      ])
-      }
-      let(:expected_body) { { lrps: [
+      let(:expected_body) { { desired_lrp_scheduling_infos: [
         {
-          process_guid: 'guid_1234',
-          imageUrl: 'http://example.org/image1234',
-          command: ['ls', ' -la'],
-          env: {
-            'PORT' => 234,
-            'FOO' => 'BAR'
-          },
-          targetInstances: 4
+          desired_lrp_key: {
+            process_guid: 'guid_1234'
+          }
         },
         {
-          process_guid: 'guid_5678',
-
-          imageUrl: 'http://example.org/image5678',
-          command: ['rm', '-rf', '/'],
-          env: {
-            'BAZ' => 'BAR'
-          },
-          targetInstances: 2
+          desired_lrp_key: {
+            process_guid: 'guid_5678'
+          }
         }
       ] }.to_json
       }
@@ -101,11 +69,12 @@ module OPI
         end
 
         it 'propagates the response' do
-          response = client.fetch_scheduling_infos
+          scheduling_infos = client.fetch_scheduling_infos
           expect(WebMock).to have_requested(:get, "#{opi_url}/apps")
-          expect(response.body).to eq(expected_body)
 
-          expect(response.status_code).to eq(200)
+          expect(scheduling_infos.size).to eq(2)
+          guids = scheduling_infos.map { |p| p.desired_lrp_key.process_guid }
+          expect(guids).to match_array(["guid_1234", "guid_5678"])
         end
       end
     end

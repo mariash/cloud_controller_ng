@@ -1,6 +1,8 @@
 require 'uri'
 require 'httpclient'
 require 'multi_json'
+require 'json'
+require 'ostruct'
 
 module OPI
   class Client
@@ -32,7 +34,9 @@ module OPI
       client = HTTPClient.new
       @opi_url.path = '/apps'
 
-      client.get(@opi_url)
+      resp = client.get(@opi_url)
+      resp_json = JSON.parse(resp.body, object_class: OpenStruct)
+      resp_json.desired_lrp_scheduling_infos
     end
 
     # We need these methods to exists in order to run our tests.
