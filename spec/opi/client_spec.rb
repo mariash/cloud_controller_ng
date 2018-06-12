@@ -1,4 +1,5 @@
 require 'cloud_controller/opi/client'
+require 'cloud_controller/errors/api_error'
 require 'webmock/rspec'
 
 module VCAP
@@ -150,5 +151,54 @@ describe(OPI::Client) do
         expect(response.status_code).to eq(200)
       end
     end
+  end
+
+  describe '#update_app' do
+      let(:opi_url) { 'http://opi.service.cf.internal:8077' }
+      subject(:client) { described_class.new(opi_url) }
+
+      let(:process) {
+        double(
+          guid: 'guid',
+          version: '1234',
+          desired_instances: 5
+        )
+      }
+      context 'when request executes successfully' do
+
+        before do
+          stub_request(:post, "#{opi_url}/apps/guid-1234").
+            to_return(status: 200)
+        end
+
+        it 'executes an http request' do
+          client.update_app(process)
+          expect(WebMock).to have_requested(:post, "#{opi_url}/apps/guid-1234")
+        end
+
+        it 'propagates the response' do
+          response = client.update_app(process)
+
+          expect(response.status_code).to equal(200)
+          expect(response.body).to be_empty
+        end
+      end
+
+      context 'when the request returns an error' do
+        let(:expected_body) {{
+          error: {
+            message: 'reasons for failure'
+          }
+        }.to_json}
+
+        before do
+          stub_request(:post, "#{opi_url}/apps/guid-1234").
+            to_return(status: 400, body: expected_body)
+        end
+
+        it 'raises ApiError' do
+          # expect(client.update_app(process)).to raise_error(CloudController::Errors::ApiError)
+        end
+      end
   end
 end

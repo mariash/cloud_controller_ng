@@ -54,8 +54,18 @@ module OPI
       )
     end
 
-    def update_app(process_guid, lrp_update); end
- 
+    def update_app(updated_process)
+        client = HTTPClient.new
+        @opi_url.path = "/apps/#{process_guid(updated_process)}"
+
+        response = client.post(@opi_url)
+        if response.status_code != 200
+          response_json = JSON.parse(response.body, object_class: OpenStruct)
+          raise CloudController::Errors::ApiError.new_from_details("OpiError", response_json.error.message)
+        end
+        response
+    end
+
     def stop_app(process_guid); end
 
     def bump_freshness; end
