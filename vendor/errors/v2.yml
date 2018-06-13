@@ -1188,3 +1188,8 @@
   name: DeploymentsDisabled
   http_code: 403
   message: "Deployments cannot be created due to manifest property 'temporary_disable_deployments'"
+
+390015:
+  name: OpiError
+  http_code: 500
+  message: "Opi error: %s"
