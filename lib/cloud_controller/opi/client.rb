@@ -60,10 +60,17 @@ module OPI
 
         response = client.post(@opi_url)
         if response.status_code != 200
-          response_json = JSON.parse(response.body, object_class: OpenStruct)
-          raise CloudController::Errors::ApiError.new_from_details("OpiError", response_json.error.message)
+          response_json = recursive_ostruct(JSON.parse(response.body))
+          raise CloudController::Errors::ApiError.new_from_details("RunnerError", response_json.error.message)
         end
         response
+    end
+
+    def recursive_ostruct(hash)
+      OpenStruct.new(hash.map { |key, value|
+        new_val = value.is_a?(Hash) ? recursive_ostruct(value) : value
+        [key, new_val]
+      }.to_h)
     end
 
     def stop_app(process_guid); end

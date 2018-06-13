@@ -1,20 +1,7 @@
+require 'spec_helper'
 require 'cloud_controller/opi/client'
-require 'webmock/rspec'
 
-module VCAP
-  module CloudController
-    class AppModel; end
-    class Config; end
-  end
-end
-
-module CloudController
-  module Errors
-    class ApiError < StandardError; end
-  end
-end
-
-describe(OPI::Client) do
+RSpec.describe(OPI::Client) do
   describe 'can desire an app' do
     subject(:client) { described_class.new(opi_url) }
     let(:opi_url) { 'http://opi.service.cf.internal:8077' }
@@ -196,19 +183,14 @@ describe(OPI::Client) do
           }
         }.to_json}
 
-        let(:api_error) { double }
-
-
         before do
           stub_request(:post, "#{opi_url}/apps/guid-1234").
             to_return(status: 400, body: expected_body)
 
-          allow(CloudController::Errors::ApiError).to receive(:new_from_details).and_return(api_error)
-
         end
 
         it 'raises ApiError' do
-          expect(client.update_app(process)).to raise_error(CloudController::Errors::ApiError)
+          expect{client.update_app(process)}.to raise_error(CloudController::Errors::ApiError)
         end
       end
   end
