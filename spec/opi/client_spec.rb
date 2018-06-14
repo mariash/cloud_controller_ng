@@ -146,52 +146,114 @@ RSpec.describe(OPI::Client) do
   end
 
   describe '#update_app' do
-      let(:opi_url) { 'http://opi.service.cf.internal:8077' }
-      subject(:client) { described_class.new(opi_url) }
+    let(:opi_url) { 'http://opi.service.cf.internal:8077' }
+    subject(:client) { described_class.new(opi_url) }
 
-      let(:process) {
-        double(
-          guid: 'guid',
-          version: '1234',
-          desired_instances: 5
-        )
-      }
-      context 'when request executes successfully' do
+    let(:existing_lrp) { double }
+    let(:process) {
+      double(
+        guid: 'guid-1234',
+        desired_instances: 5
+      )
+    }
 
-        before do
-          stub_request(:post, "#{opi_url}/apps/guid-1234").
-            to_return(status: 200)
-        end
-
-        it 'executes an http request' do
-          client.update_app(process)
-          expect(WebMock).to have_requested(:post, "#{opi_url}/apps/guid-1234")
-        end
-
-        it 'propagates the response' do
-          response = client.update_app(process)
-
-          expect(response.status_code).to equal(200)
-          expect(response.body).to be_empty
-        end
-      end
-
-      context 'when the request returns an error' do
-        let(:expected_body) {{
-          error: {
-            message: 'reasons for failure'
+    let(:expected_body) {
+      {
+          process_guid: 'guid-1234',
+          update: {
+            instances: 5
           }
-        }.to_json}
+      }.to_json
+    }
 
-        before do
-          stub_request(:post, "#{opi_url}/apps/guid-1234").
-            to_return(status: 400, body: expected_body)
-
-        end
-
-        it 'raises ApiError' do
-          expect{client.update_app(process)}.to raise_error(CloudController::Errors::ApiError)
-        end
+    context 'when request executes successfully' do
+      before do
+        stub_request(:post, "#{opi_url}/apps/guid-1234").
+          to_return(status: 200)
       end
+
+      it 'executes an http request' do
+        client.update_app(process, existing_lrp)
+        expect(WebMock).to have_requested(:post, "#{opi_url}/apps/guid-1234").
+          with(body: expected_body)
+      end
+
+      it 'propagates the response' do
+        response = client.update_app(process, existing_lrp)
+
+        expect(response.status_code).to equal(200)
+        expect(response.body).to be_empty
+      end
+    end
+
+    context 'when the request returns an error' do
+      let(:expected_body) { {
+        error: {
+          message: 'reasons for failure'
+        }
+      }.to_json}
+
+      before do
+        stub_request(:post, "#{opi_url}/apps/guid-1234").
+          to_return(status: 400, body: expected_body)
+      end
+
+      it 'raises ApiError' do
+        expect { client.update_app(process, existing_lrp) }.to raise_error(CloudController::Errors::ApiError)
+      end
+    end
+  end
+
+  describe '#get_app' do
+    let(:opi_url) { 'http://opi.service.cf.internal:8077' }
+    subject(:client) { described_class.new(opi_url) }
+    let(:process) { double(guid: 'guid-1234') }
+
+    context 'when the app exists' do
+      let(:desired_lrp) {
+        {
+          process_guid: 'guid-1234',
+          instances: 5
+        }
+      }
+
+      let(:expected_body) {
+        {
+          desired_lrp: desired_lrp
+        }.to_json
+      }
+      before do
+        stub_request(:get, "#{opi_url}/app/guid-1234").
+          to_return(status: 200, body: expected_body)
+      end
+
+      it 'executes an HTTP request' do
+        client.get_app(process)
+        expect(WebMock).to have_requested(:get, "#{opi_url}/app/guid-1234")
+      end
+
+      it 'returns the desired lrp' do
+        desired_lrp = client.get_app(process)
+        expect(desired_lrp.process_guid).to eq('guid-1234')
+        expect(desired_lrp.instances).to eq(5)
+      end
+    end
+
+    context 'when the app does not exist' do
+      before do
+        stub_request(:get, "#{opi_url}/app/guid-1234").
+          to_return(status: 404)
+      end
+
+      it 'executed and HTTP request' do
+        client.get_app(process)
+        expect(WebMock).to have_requested(:get, "#{opi_url}/app/guid-1234")
+      end
+
+      it 'returns nil' do
+        desired_lrp = client.get_app(process)
+        expect(desired_lrp).to be_nil
+      end
+    end
   end
 end

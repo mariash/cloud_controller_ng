@@ -15,10 +15,10 @@ module OPI
       client = HTTPClient.new
       process_guid = process_guid(process)
       @opi_url.path = "/apps/#{process_guid}"
-      client.put(@opi_url, body: body(process))
+      client.put(@opi_url, body: desire_body(process))
     end
 
-    def body(process)
+    def desire_body(process)
       body = {
         process_guid: process_guid(process),
         docker_image: process.current_droplet.docker_receipt_image,
@@ -47,23 +47,26 @@ module OPI
       resp_json["desired_lrp_scheduling_infos"].map { |h| to_recursive_ostruct(h) }
     end
 
-    def get_app(process_guid)
-      ::Diego::Bbs::Models::DesiredLRP.new(
-        process_guid: process_guid,
-        routes: [],
-      )
+    def update_app(process, existing_lrp)
+      client = HTTPClient.new
+      @opi_url.path = "/apps/#{process.guid}"
+
+      response = client.post(@opi_url, body: update_body(process))
+      if response.status_code != 200
+        response_json = recursive_ostruct(JSON.parse(response.body))
+        raise CloudController::Errors::ApiError.new_from_details('RunnerError', response_json.error.message)
+      end
+      response
     end
 
-    def update_app(updated_process)
-        client = HTTPClient.new
-        @opi_url.path = "/apps/#{process_guid(updated_process)}"
-
-        response = client.post(@opi_url)
-        if response.status_code != 200
-          response_json = recursive_ostruct(JSON.parse(response.body))
-          raise CloudController::Errors::ApiError.new_from_details("RunnerError", response_json.error.message)
-        end
-        response
+    def update_body(process)
+      body = {
+        process_guid: process.guid,
+        update: {
+          instances: process.desired_instances
+        }
+      }
+      MultiJson.dump(body)
     end
 
     def recursive_ostruct(hash)
@@ -71,6 +74,19 @@ module OPI
         new_val = value.is_a?(Hash) ? recursive_ostruct(value) : value
         [key, new_val]
       }.to_h)
+    end
+
+    def get_app(process)
+      client = HTTPClient.new
+      @opi_url.path = "/app/#{process.guid}"
+
+      response = client.get(@opi_url)
+      if response.status_code == 404
+        return nil
+      end
+
+      desired_lrp_response = recursive_ostruct(JSON.parse(response.body))
+      desired_lrp_response.desired_lrp
     end
 
     def stop_app(process_guid); end
