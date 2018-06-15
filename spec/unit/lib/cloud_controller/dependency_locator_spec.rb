@@ -520,12 +520,14 @@ RSpec.describe CloudController::DependencyLocator do
 
   describe '#bbs_apps_client' do
     context 'opi is disabled' do
+      let(:diego_client) { double }
+
       before do
-        allow(::Diego::Client).to receive(:new)
+        allow(::Diego::Client).to receive(:new).and_return(diego_client)
       end
 
       it 'uses diego' do
-        expect(VCAP::CloudController::Diego::BbsAppsClient).to receive(:new)
+        expect(VCAP::CloudController::Diego::BbsAppsClient).to receive(:new).with(diego_client, config)
         expect(::OPI::Client).to_not receive(:new)
         locator.bbs_apps_client
       end
