@@ -30,13 +30,11 @@ module VCAP::CloudController
             if diego_lrp.nil?
               workpool.submit(process) do |p|
                 bbs_apps_client.desire_app(p)
-
                 logger.info('desire-lrp', process_guid: p.guid)
               end
             elsif process.updated_at.to_f.to_s != diego_lrp.annotation
               workpool.submit(process, diego_lrp) do |p, l|
-                recipe_builder = AppRecipeBuilder.new(config: config, process: p)
-                bbs_apps_client.update_app(process_guid, recipe_builder.build_app_lrp_update(l))
+                bbs_apps_client.update_app(p, l)
                 logger.info('update-lrp', process_guid: p.guid)
               end
             end
