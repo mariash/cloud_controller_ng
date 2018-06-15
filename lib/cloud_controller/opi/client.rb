@@ -47,7 +47,7 @@ module OPI
       resp_json["desired_lrp_scheduling_infos"].map { |h| to_recursive_ostruct(h) }
     end
 
-    def update_app(process, existing_lrp)
+    def update_app(process, _)
       client = HTTPClient.new
       @opi_url.path = "/apps/#{process.guid}"
 
