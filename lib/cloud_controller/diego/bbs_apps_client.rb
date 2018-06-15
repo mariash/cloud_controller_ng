@@ -1,7 +1,7 @@
 module VCAP::CloudController
   module Diego
     class BbsAppsClient
-      def initialize(client, config=nil)
+      def initialize(client, config)
         @client = client
         @config = config
       end

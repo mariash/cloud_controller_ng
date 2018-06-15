@@ -406,7 +406,7 @@ module CloudController
         client_key_file: config.get(:diego, :bbs, :key_file),
     )
 
-      VCAP::CloudController::Diego::BbsAppsClient.new(bbs_client)
+      VCAP::CloudController::Diego::BbsAppsClient.new(bbs_client, config)
     end
 
     def build_bbs_task_client
