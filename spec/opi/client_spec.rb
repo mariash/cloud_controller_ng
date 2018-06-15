@@ -24,6 +24,7 @@ RSpec.describe(OPI::Client) do
           name: 'name',
           guid: 'guid',
         ),
+        updated_at: Time.at(1529064800.9),
      )
     }
 
@@ -69,7 +70,8 @@ RSpec.describe(OPI::Client) do
               },
             ],
             num_instances: 4,
-            droplet_hash: 'd_haash'
+            droplet_hash: 'd_haash',
+            updated_at: '1529064800.9'
           }.to_json
         )
       end
@@ -153,7 +155,8 @@ RSpec.describe(OPI::Client) do
     let(:process) {
       double(
         guid: 'guid-1234',
-        desired_instances: 5
+        desired_instances: 5,
+        updated_at: Time.at(1529065322.6)
       )
     }
 
@@ -161,7 +164,8 @@ RSpec.describe(OPI::Client) do
       {
           process_guid: 'guid-1234',
           update: {
-            instances: 5
+            instances: 5,
+            updated_at: '1529065322.6'
           }
       }.to_json
     }

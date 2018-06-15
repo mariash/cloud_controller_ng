@@ -25,7 +25,8 @@ module OPI
         start_command: process.command.nil? ? process.detected_start_command : process.command,
         environment: convert_to_name_value_pair(vcap_application(process)),
         num_instances: process.desired_instances,
-        droplet_hash: process.current_droplet.droplet_hash
+        droplet_hash: process.current_droplet.droplet_hash,
+        updated_at: process.updated_at.to_f.to_s
       }
       MultiJson.dump(body)
     end
@@ -63,7 +64,8 @@ module OPI
       body = {
         process_guid: process.guid,
         update: {
-          instances: process.desired_instances
+          instances: process.desired_instances,
+          updated_at: process.updated_at.to_f.to_s
         }
       }
       MultiJson.dump(body)
