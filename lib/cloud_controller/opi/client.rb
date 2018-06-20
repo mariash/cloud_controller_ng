@@ -23,8 +23,8 @@ module OPI
         process_guid: process_guid(process),
         docker_image: process.current_droplet.docker_receipt_image,
         start_command: process.command.nil? ? process.detected_start_command : process.command,
-        environment: convert_to_name_value_pair(vcap_application(process)),
-        num_instances: process.desired_instances,
+        environment: hash_values_to_s(vcap_application(process)),
+        instances: process.desired_instances,
         droplet_hash: process.current_droplet.droplet_hash,
         last_updated: process.updated_at.to_f.to_s
       }
@@ -101,17 +101,17 @@ module OPI
       @logger ||= Steno.logger('cc.opi.apps_client')
     end
 
-    def convert_to_name_value_pair(hash)
-      hash.map do |k, v|
-        case v
-        when Array, Hash
-          v = MultiJson.dump(v)
-        else
-          v = v.to_s
-        end
+    def hash_values_to_s(hash)
+      Hash[hash.map do |k, v|
+          case v
+          when Array, Hash
+            v = MultiJson.dump(v)
+          else
+            v = v.to_s
+          end
 
-        { name: k.to_s, value: v }
-      end
+         [k.to_s, v]
+      end]
     end
   end
 end

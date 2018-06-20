@@ -46,30 +46,12 @@ RSpec.describe(OPI::Client) do
             process_guid: 'guid_1234-0.1.0',
             docker_image: img_url,
             start_command: 'ls -la',
-            environment: [
-              { name: 'PORT', value: '8080' },
-              { name: 'FOO', value: 'BAR' },
-              { name: 'VCAP_APPLICATION', value: {
-                  cf_api: 'https://api.example.com',
-                  limits: {
-                    fds: 3131746989,
-                    mem: 256,
-                    disk: 100,
-                  },
-                  application_name: 'dora',
-                  application_uris: [],
-                  name: 'dora',
-                  space_name: 'name',
-                  space_id: 'guid',
-                  uris: [],
-                  users: nil,
-                  application_id: 'guid_1234',
-                  version: '0.1.0',
-                  application_version: '0.1.0'
-                }.to_json,
-              },
-            ],
-            num_instances: 4,
+            environment: {
+                'PORT': '8080',
+                'FOO': 'BAR',
+                'VCAP_APPLICATION': '{"cf_api":"https://api.example.com","limits":{"fds":3131746989,"mem":256,"disk":100},"application_name":"dora","application_uris":[],"name":"dora","space_name":"name","space_id":"guid","uris":[],"users":null,"application_id":"guid_1234","version":"0.1.0","application_version":"0.1.0"}',
+            },
+            instances: 4,
             droplet_hash: 'd_haash',
             last_updated: '1529064800.9'
           }.to_json
@@ -81,52 +63,21 @@ RSpec.describe(OPI::Client) do
   describe 'can fetch scheduling infos' do
     let(:opi_url) { 'http://opi.service.cf.internal:8077' }
 
-    let(:lrp) { double(lrps: [
-      double(
-        process_guid: 'guid_1234',
-        imageUrl: 'http://example.org/image1234',
-        command: ['ls', ' -la'],
-        env: {
-         'PORT' => 234,
-         'FOO' => 'BAR'
-       },
-        targetInstances: 4
-      ),
-      double(
-        process_guid: 'guid_5678',
-        imageUrl: 'http://example.org/image5678',
-        command: ['rm', '-rf', '/'],
-        env: {
-          'BAZ' => 'BAR'
+    let(:expected_body) { { desired_lrp_scheduling_infos: [
+        {
+          desired_lrp_key: {
+            process_guid: 'guid_1234',
+            annotation: '1111111111111.1',
+          }
         },
-        targetInstances: 2
-      )
-    ])
-    }
-
-    let(:expected_body) { { lrps: [
-      {
-        process_guid: 'guid_1234',
-        imageUrl: 'http://example.org/image1234',
-        command: ['ls', ' -la'],
-        env: {
-          'PORT' => 234,
-          'FOO' => 'BAR'
-        },
-        targetInstances: 4
-      },
-      {
-        process_guid: 'guid_5678',
-
-        imageUrl: 'http://example.org/image5678',
-        command: ['rm', '-rf', '/'],
-        env: {
-          'BAZ' => 'BAR'
-        },
-        targetInstances: 2
+        {
+          desired_lrp_key: {
+            process_guid: 'guid_5678',
+            annotation: '222222222222222.2',
+          }
+        }
+      ] }.to_json
       }
-    ] }.to_json
-    }
 
     subject(:client) {
       described_class.new(opi_url)
@@ -138,11 +89,14 @@ RSpec.describe(OPI::Client) do
           to_return(status: 200, body: expected_body)
       end
 
-      it 'propagates the response' do
-        response = client.fetch_scheduling_infos
-        expect(WebMock).to have_requested(:get, "#{opi_url}/apps")
-        expect(response.body).to eq(expected_body)
-        expect(response.status_code).to eq(200)
+      it 'returns the expected scheduling infos' do
+        scheduling_infos = client.fetch_scheduling_infos
+          expect(WebMock).to have_requested(:get, "#{opi_url}/apps")
+
+          expect(scheduling_infos).to match_array([
+            OpenStruct.new(:desired_lrp_key => OpenStruct.new(:process_guid => 'guid_1234', :annotation => '1111111111111.1')),
+            OpenStruct.new(:desired_lrp_key => OpenStruct.new(:process_guid => 'guid_5678', :annotation => '222222222222222.2')),
+          ])
       end
     end
   end
