@@ -1,5 +1,5 @@
 require 'spec_helper'
-require 'cloud_controller/opi/client'
+require 'cloud_controller/opi/apps_client'
 
 RSpec.describe(OPI::Client) do
   describe 'can desire an app' do
@@ -181,13 +181,13 @@ RSpec.describe(OPI::Client) do
         }.to_json
       }
       before do
-        stub_request(:get, "#{opi_url}/app/guid-1234").
+        stub_request(:get, "#{opi_url}/apps/guid-1234").
           to_return(status: 200, body: expected_body)
       end
 
       it 'executes an HTTP request' do
         client.get_app(process)
-        expect(WebMock).to have_requested(:get, "#{opi_url}/app/guid-1234")
+        expect(WebMock).to have_requested(:get, "#{opi_url}/apps/guid-1234")
       end
 
       it 'returns the desired lrp' do
@@ -199,13 +199,13 @@ RSpec.describe(OPI::Client) do
 
     context 'when the app does not exist' do
       before do
-        stub_request(:get, "#{opi_url}/app/guid-1234").
+        stub_request(:get, "#{opi_url}/apps/guid-1234").
           to_return(status: 404)
       end
 
       it 'executed and HTTP request' do
         client.get_app(process)
-        expect(WebMock).to have_requested(:get, "#{opi_url}/app/guid-1234")
+        expect(WebMock).to have_requested(:get, "#{opi_url}/apps/guid-1234")
       end
 
       it 'returns nil' do
