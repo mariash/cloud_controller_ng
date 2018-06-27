@@ -80,7 +80,7 @@ module OPI
 
     def get_app(process)
       client = HTTPClient.new
-      @opi_url.path = "/app/#{process.guid}"
+      @opi_url.path = "/apps/#{process.guid}"
 
       response = client.get(@opi_url)
       if response.status_code == 404

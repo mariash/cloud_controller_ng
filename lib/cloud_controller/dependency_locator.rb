@@ -24,7 +24,8 @@ require 'cloud_controller/bits_service_resource_pool_wrapper'
 require 'cloud_controller/packager/local_bits_packer'
 require 'cloud_controller/packager/bits_service_packer'
 require 'credhub/client'
-require 'cloud_controller/opi/client'
+require 'cloud_controller/opi/apps_client'
+require 'cloud_controller/opi/instances_client'
 
 require 'bits_service_client'
 
@@ -84,7 +85,7 @@ module CloudController
     end
 
     def bbs_instances_client
-      @dependencies[:bbs_instances_client] || register(:bbs_instances_client, build_bbs_instances_client)
+      @dependencies[:bbs_instances_client] || register(:bbs_instances_client, build_instances_client)
     end
 
     def traffic_controller_client
@@ -405,6 +406,18 @@ module CloudController
       )
 
       VCAP::CloudController::Diego::BbsTaskClient.new(bbs_client)
+    end
+
+    def build_instances_client
+      if config.get(:opi, :enabled)
+        build_opi_instances_client
+      else
+        build_bbs_instances_client
+      end
+    end
+
+    def build_opi_instances_client
+      ::OPI::InstancesClient.new(config.get(:opi, :url))
     end
 
     def build_bbs_instances_client
