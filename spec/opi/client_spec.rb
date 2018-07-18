@@ -214,4 +214,24 @@ RSpec.describe(OPI::Client) do
       end
     end
   end
+
+  context 'stop an app' do
+    let(:opi_url) { 'http://opi.service.cf.internal:8077' }
+    subject(:client) { described_class.new(opi_url) }
+
+    before do
+      stub_request(:put, "#{opi_url}/apps/guid-1234/stop").
+        to_return(status: 200)
+    end
+
+    it 'executes an HTTP request' do
+      client.stop_app('guid-1234')
+      expect(WebMock).to have_requested(:put, "#{opi_url}/apps/guid-1234/stop")
+    end
+
+    it 'returns status OK' do
+      response = client.stop_app('guid-1234')
+      expect(response.status).to equal(200)
+    end
+  end
 end

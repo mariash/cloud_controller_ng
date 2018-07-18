@@ -91,7 +91,11 @@ module OPI
       desired_lrp_response.desired_lrp
     end
 
-    def stop_app(process_guid); end
+    def stop_app(process_guid)
+      client = HTTPClient.new
+      @opi_url.path = "/apps/#{process_guid}/stop"
+      client.put(@opi_url)
+    end
 
     def bump_freshness; end
 
