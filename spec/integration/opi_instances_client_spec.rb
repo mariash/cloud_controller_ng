@@ -36,10 +36,8 @@ RSpec.describe(OPI::InstancesClient) do
   context 'OPI system tests' do
     context 'Get instances' do
       let(:expected_instances) {
-        [OPI::InstancesClient::ActualLRP.new(OPI::InstancesClient::ActualLRPKey.new(0, 'jeff'), "RUNNING"),
-         OPI::InstancesClient::ActualLRP.new(OPI::InstancesClient::ActualLRPKey.new(1, 'jeff'), "RUNNING"),
-         OPI::InstancesClient::ActualLRP.new(OPI::InstancesClient::ActualLRPKey.new(2, 'jeff'), "CRASHED"),
-         OPI::InstancesClient::ActualLRP.new(OPI::InstancesClient::ActualLRPKey.new(3, 'jeff'), "CRASHED")]
+        [OPI::InstancesClient::ActualLRP.new(OPI::InstancesClient::ActualLRPKey.new(0, 'jeff'), 'RUNNING'),
+         OPI::InstancesClient::ActualLRP.new(OPI::InstancesClient::ActualLRPKey.new(1, 'jeff'), 'RUNNING')]
       }
 
       it 'does not error' do
