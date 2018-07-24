@@ -88,9 +88,8 @@ module OPI
     end
 
     def stop_app(process_guid)
-      client = HTTPClient.new
-      @opi_url.path = "/apps/#{process_guid}/stop"
-      client.put(@opi_url)
+      path = "/apps/#{process_guid}/stop"
+      @client.put(path)
     end
 
     def bump_freshness; end
