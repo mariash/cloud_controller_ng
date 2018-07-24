@@ -14,7 +14,7 @@ RSpec.describe(OPI::InstancesClient) do
       {
         process_guid: 'my-guid-0',
         instances: [
-          { index: 42, state: "RUNNING" }
+          { index: 42, state: 'RUNNING' }
         ]
       }.to_json
     end
@@ -44,7 +44,7 @@ RSpec.describe(OPI::InstancesClient) do
     it 'provides the state' do
       actual_lrp = actual_lrps.first
       expect(actual_lrp).to respond_to(:state)
-      expect(actual_lrp.state).to eq("RUNNING")
+      expect(actual_lrp.state).to eq('RUNNING')
     end
 
     it 'provides the process guid' do
@@ -70,9 +70,9 @@ RSpec.describe(OPI::InstancesClient) do
         {
           process_guid: 'my-guid-0',
           instances: [
-            { index: 11, state: "RUNNING" },
-            { index: 23, state: "CLAIMED" },
-            { index: 42, state: "CLAIMED" },
+            { index: 11, state: 'RUNNING' },
+            { index: 23, state: 'CLAIMED' },
+            { index: 42, state: 'CLAIMED' },
           ]
         }.to_json
       end
@@ -88,9 +88,9 @@ RSpec.describe(OPI::InstancesClient) do
       end
 
       it 'provides the states' do
-        expect(actual_lrps[0].state).to eq("RUNNING")
-        expect(actual_lrps[1].state).to eq("CLAIMED")
-        expect(actual_lrps[2].state).to eq("CLAIMED")
+        expect(actual_lrps[0].state).to eq('RUNNING')
+        expect(actual_lrps[1].state).to eq('CLAIMED')
+        expect(actual_lrps[2].state).to eq('CLAIMED')
       end
 
       it 'provides the single guid of the process' do
@@ -125,7 +125,7 @@ RSpec.describe(OPI::InstancesClient) do
       end
 
       it 'should succeed after several retries' do
-          client.lrp_instances(process)
+        client.lrp_instances(process)
         expect(a_request(:get, "#{opi_url}/apps/#{process.guid}/instances")).to have_been_made.times(4)
       end
     end
