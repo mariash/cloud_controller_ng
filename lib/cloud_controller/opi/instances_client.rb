@@ -26,18 +26,17 @@ module OPI
     end
 
     def initialize(opi_url)
-      @opi_url = URI(opi_url)
+      @client = HTTPClient.new(base_url: URI(opi_url))
     end
 
     def lrp_instances(process)
-      client = HTTPClient.new
-      @opi_url.path = "/apps/#{process.guid}/instances"
+      path = "/apps/#{process.guid}/instances"
       begin
         retries ||= 0
-        resp = client.get(@opi_url)
+        resp = @client.get(path)
         resp_json = JSON.parse(resp.body)
         handle_error(resp_json)
-      rescue => e
+      rescue CloudController::Errors::NoRunningInstances => e
         retry if (retries += 1) < 5
         raise e
       end

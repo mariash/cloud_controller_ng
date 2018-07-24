@@ -8,14 +8,13 @@ require 'ostruct'
 module OPI
   class Client
     def initialize(opi_url)
-      @opi_url = URI(opi_url)
+      @client = HTTPClient.new(base_url: URI(opi_url))
     end
 
     def desire_app(process)
-      client = HTTPClient.new
       process_guid = process_guid(process)
-      @opi_url.path = "/apps/#{process_guid}"
-      client.put(@opi_url, body: desire_body(process))
+      path = "/apps/#{process_guid}"
+      @client.put(path, body: desire_body(process))
     end
 
     def desire_body(process)
@@ -40,19 +39,17 @@ module OPI
     end
 
     def fetch_scheduling_infos
-      client = HTTPClient.new
-      @opi_url.path = '/apps'
+      path = '/apps'
 
-      resp = client.get(@opi_url)
+      resp = @client.get(path)
       resp_json = JSON.parse(resp.body)
       resp_json['desired_lrp_scheduling_infos'].map { |h| recursive_ostruct(h) }
     end
 
     def update_app(process, _)
-      client = HTTPClient.new
-      @opi_url.path = "/apps/#{process.guid}"
+      path = "/apps/#{process.guid}"
 
-      response = client.post(@opi_url, body: update_body(process))
+      response = @client.post(path, body: update_body(process))
       if response.status_code != 200
         response_json = recursive_ostruct(JSON.parse(response.body))
         raise CloudController::Errors::ApiError.new_from_details('RunnerError', response_json.error.message)
@@ -79,10 +76,9 @@ module OPI
     end
 
     def get_app(process)
-      client = HTTPClient.new
-      @opi_url.path = "/apps/#{process.guid}"
+      path = "/apps/#{process.guid}"
 
-      response = client.get(@opi_url)
+      response = @client.get(path)
       if response.status_code == 404
         return nil
       end
