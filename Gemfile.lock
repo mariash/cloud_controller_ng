@@ -482,8 +482,6 @@ DEPENDENCIES
   fog-local
   fog-openstack
   googleapis-common-protos
-  guard
-  guard-rspec
   hashdiff
   httpclient
   i18n
