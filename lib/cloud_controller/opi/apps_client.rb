@@ -68,7 +68,7 @@ module OPI
         instances: process.desired_instances,
         droplet_hash: process.current_droplet.droplet_hash,
         health_check_type: process.health_check_type,
-        health_check_endpoint: process.health_check_http_endpoint,
+        health_check_http_endpoint: process.health_check_http_endpoint,
         health_check_timeout_ms: timeout_ms,
         last_updated: process.updated_at.to_f.to_s
       }

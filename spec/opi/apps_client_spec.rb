@@ -53,6 +53,9 @@ RSpec.describe(OPI::Client) do
             },
             instances: 4,
             droplet_hash: 'd_haash',
+            health_check_type: 'http',
+            health_check_http_endpoint: '/health',
+            health_check_timeout_ms: 1000,
             last_updated: '1529064800.9'
           }.to_json
         )
