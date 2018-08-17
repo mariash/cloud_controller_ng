@@ -113,24 +113,56 @@ RSpec.describe(OPI::Client) do
         updated_at: Time.at(1529064800.9),
       )
     }
-
-    let(:expected_body) {
-      {
-          process_guid: 'guid-1234',
-          update: {
-            instances: 5,
-            annotation: '1529064800.9',
-          }
-      }.to_json
+    let(:routing_info) {
+      instance_double(VCAP::CloudController::Diego::Protocol::RoutingInfo)
     }
 
-    context 'when request executes successfully' do
-      before do
-        stub_request(:post, "#{opi_url}/apps/guid-1234").
-          to_return(status: 200)
-      end
+    before do
+      routes = {
+            'http_routes' => [
+              {
+                'hostname'          => 'numero-uno.example.com',
+                'port'              => 8080
+              },
+              {
+                'hostname'          => 'numero-dos.example.com',
+                'port'              => 8080,
+              }
+            ]
+      }
 
-      it 'executes an http request' do
+      allow(routing_info).to receive(:routing_info).and_return(routes)
+      allow(VCAP::CloudController::Diego::Protocol::RoutingInfo).to receive(:new).with(process).and_return(routing_info)
+
+      stub_request(:post, "#{opi_url}/apps/guid-1234").
+        to_return(status: 200)
+    end
+
+    context 'when request contains updated instances and routes' do
+      let(:expected_body) {
+        {
+            process_guid: 'guid-1234',
+            update: {
+              instances: 5,
+              routes: [
+                key: 'cf-router',
+                value: [
+                  {
+                    'hostnames'         => ['numero-uno.example.com'],
+                    'port'              => 8080,
+                  },
+                  {
+                    'hostnames'         => ['numero-dos.example.com'],
+                    'port'              => 8080,
+                  }
+                ].to_json
+              ],
+              annotation: '1529064800.9',
+            }
+        }.to_json
+      }
+
+      it 'executes an http request with correct instances and routes' do
         client.update_app(process, existing_lrp)
         expect(WebMock).to have_requested(:post, "#{opi_url}/apps/guid-1234").
           with(body: expected_body)
@@ -144,7 +176,40 @@ RSpec.describe(OPI::Client) do
       end
     end
 
-    context 'when the request returns an error' do
+    context 'when request does not contain routes' do
+      let(:expected_body) {
+        {
+            process_guid: 'guid-1234',
+            update: {
+              instances: 5,
+              routes: [
+                key: 'cf-router',
+                value: [].to_json
+              ],
+              annotation: '1529064800.9',
+            }
+        }.to_json
+      }
+
+      before do
+        allow(routing_info).to receive(:routing_info).and_return({})
+      end
+
+      it 'executes an http request with empty cf-router entry' do
+        client.update_app(process, existing_lrp)
+        expect(WebMock).to have_requested(:post, "#{opi_url}/apps/guid-1234").
+          with(body: expected_body)
+      end
+
+      it 'propagates the response' do
+        response = client.update_app(process, existing_lrp)
+
+        expect(response.status_code).to equal(200)
+        expect(response.body).to be_empty
+      end
+    end
+
+    context 'when the response has an error' do
       let(:expected_body) { {
         error: {
           message: 'reasons for failure'
