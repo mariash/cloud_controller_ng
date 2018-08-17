@@ -17,27 +17,6 @@ module OPI
       @client.put(path, body: desire_body(process))
     end
 
-    def desire_body(process)
-      body = {
-        process_guid: process_guid(process),
-        docker_image: process.current_droplet.docker_receipt_image,
-        start_command: process.command.nil? ? process.detected_start_command : process.command,
-        environment: hash_values_to_s(vcap_application(process)),
-        instances: process.desired_instances,
-        droplet_hash: process.current_droplet.droplet_hash,
-        last_updated: process.updated_at.to_f.to_s
-      }
-      MultiJson.dump(body)
-    end
-
-    def vcap_application(process)
-      process.environment_json.merge(VCAP_APPLICATION: VCAP::VarsBuilder.new(process).to_hash)
-    end
-
-    def process_guid(process)
-      "#{process.guid}-#{process.version}"
-    end
-
     def fetch_scheduling_infos
       path = '/apps'
 
@@ -55,24 +34,6 @@ module OPI
         raise CloudController::Errors::ApiError.new_from_details('RunnerError', response_json.error.message)
       end
       response
-    end
-
-    def update_body(process)
-      body = {
-        process_guid: process.guid,
-        update: {
-          instances: process.desired_instances,
-          annotation: process.updated_at.to_f.to_s
-        }
-      }
-      MultiJson.dump(body)
-    end
-
-    def recursive_ostruct(hash)
-      OpenStruct.new(hash.map { |key, value|
-        new_val = value.is_a?(Hash) ? recursive_ostruct(value) : value
-        [key, new_val]
-      }.to_h)
     end
 
     def get_app(process)
@@ -95,6 +56,68 @@ module OPI
     def bump_freshness; end
 
     private
+
+    def desire_body(process)
+      timeout_ms = (process.health_check_invocation_timeout || 0) * 1000
+
+      body = {
+        process_guid: process_guid(process),
+        docker_image: process.current_droplet.docker_receipt_image,
+        start_command: process.command.nil? ? process.detected_start_command : process.command,
+        environment: hash_values_to_s(vcap_application(process)),
+        instances: process.desired_instances,
+        droplet_hash: process.current_droplet.droplet_hash,
+        health_check_type: process.health_check_type,
+        health_check_endpoint: process.health_check_http_endpoint,
+        health_check_timeout_ms: timeout_ms,
+        last_updated: process.updated_at.to_f.to_s
+      }
+      MultiJson.dump(body)
+    end
+
+    def update_body(process)
+      body = {
+        process_guid: process.guid,
+        update: {
+          instances: process.desired_instances,
+          routes: routes(process),
+          annotation: process.updated_at.to_f.to_s
+        }
+      }
+      MultiJson.dump(body)
+    end
+
+    def routes(process)
+      routing_info = VCAP::CloudController::Diego::Protocol::RoutingInfo.new(process).routing_info
+      http_routes = (routing_info['http_routes'] || []).map do |i|
+        {
+          hostnames:         [i['hostname']],
+          port:              i['port']
+        }
+      end
+
+      [
+        {
+            key: 'cf-router',
+            value: MultiJson.dump(http_routes)
+        }
+      ]
+    end
+
+    def recursive_ostruct(hash)
+      OpenStruct.new(hash.map { |key, value|
+        new_val = value.is_a?(Hash) ? recursive_ostruct(value) : value
+        [key, new_val]
+      }.to_h)
+    end
+
+    def vcap_application(process)
+      process.environment_json.merge(VCAP_APPLICATION: VCAP::VarsBuilder.new(process).to_hash)
+    end
+
+    def process_guid(process)
+      "#{process.guid}-#{process.version}"
+    end
 
     def logger
       @logger ||= Steno.logger('cc.opi.apps_client')
