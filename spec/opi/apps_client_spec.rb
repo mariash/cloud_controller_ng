@@ -157,7 +157,7 @@ RSpec.describe(OPI::Client) do
                     'hostnames'         => ['numero-dos.example.com'],
                     'port'              => 8080,
                   }
-                ].to_json
+                ]
               },
               annotation: '1529064800.9',
             }
@@ -185,7 +185,7 @@ RSpec.describe(OPI::Client) do
             update: {
               instances: 5,
               routes: {
-                'cf-router' => [].to_json
+                'cf-router' => []
               },
               annotation: '1529064800.9',
             }

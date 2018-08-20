@@ -13,7 +13,11 @@ require 'spec_helper'
 RSpec.describe(OPI::Client) do
   let(:opi_url) { 'http://localhost:8085' }
   subject(:client) { described_class.new(opi_url) }
-  let(:process) { double(guid: 'jeff') }
+  let(:process) { double(
+    guid: 'jeff',
+    desired_instances: 5,
+    updated_at: '1241232.42'
+  ) }
 
   before :all do
     WebMock.disable_net_connect!(allow_localhost: true)
@@ -74,6 +78,32 @@ RSpec.describe(OPI::Client) do
       it 'returns the correct process' do
         actual_process = client.get_app(process)
         expect(actual_process.process_guid).to eq('jeff')
+      end
+    end
+
+    context 'Update an app' do
+      before do
+        routes = {
+              'http_routes' => [
+                {
+                  'hostname'          => 'numero-uno.example.com',
+                  'port'              => 8080
+                },
+                {
+                  'hostname'          => 'numero-dos.example.com',
+                  'port'              => 8080,
+                }
+              ]
+        }
+
+        routing_info = instance_double(VCAP::CloudController::Diego::Protocol::RoutingInfo)
+        allow(routing_info).to receive(:routing_info).and_return(routes)
+        allow(VCAP::CloudController::Diego::Protocol::RoutingInfo).to receive(:new).with(process).and_return(routing_info)
+      end
+
+      it 'does not error' do
+        WebMock.allow_net_connect!
+        expect { client.update_app(process, {}) }.to_not raise_error
       end
     end
   end
