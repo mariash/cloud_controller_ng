@@ -96,12 +96,7 @@ module OPI
         }
       end
 
-      [
-        {
-            key: 'cf-router',
-            value: MultiJson.dump(http_routes)
-        }
-      ]
+      { 'cf-router' => MultiJson.dump(http_routes) }
     end
 
     def recursive_ostruct(hash)

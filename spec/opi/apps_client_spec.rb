@@ -147,9 +147,8 @@ RSpec.describe(OPI::Client) do
             process_guid: 'guid-1234',
             update: {
               instances: 5,
-              routes: [
-                key: 'cf-router',
-                value: [
+              routes: {
+                'cf-router' => [
                   {
                     'hostnames'         => ['numero-uno.example.com'],
                     'port'              => 8080,
@@ -159,7 +158,7 @@ RSpec.describe(OPI::Client) do
                     'port'              => 8080,
                   }
                 ].to_json
-              ],
+              },
               annotation: '1529064800.9',
             }
         }.to_json
@@ -185,10 +184,9 @@ RSpec.describe(OPI::Client) do
             process_guid: 'guid-1234',
             update: {
               instances: 5,
-              routes: [
-                key: 'cf-router',
-                value: [].to_json
-              ],
+              routes: {
+                'cf-router' => [].to_json
+              },
               annotation: '1529064800.9',
             }
         }.to_json
