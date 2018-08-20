@@ -13,11 +13,10 @@ require 'spec_helper'
 RSpec.describe(OPI::Client) do
   let(:opi_url) { 'http://localhost:8085' }
   subject(:client) { described_class.new(opi_url) }
-  let(:process) { double(
-    guid: 'jeff',
-    desired_instances: 5,
-    updated_at: '1241232.42'
-  ) }
+  let(:process) { double(guid: 'jeff',
+                         desired_instances: 5,
+                         updated_at: '1241232.42')
+  }
 
   before :all do
     WebMock.disable_net_connect!(allow_localhost: true)
@@ -43,7 +42,7 @@ RSpec.describe(OPI::Client) do
   end
 
   context 'OPI system tests' do
-    context 'Desire ab app' do
+    context 'Desire an app' do
       let(:lrp) {
         double(
           guid: 'guid_1234',
@@ -52,6 +51,9 @@ RSpec.describe(OPI::Client) do
           current_droplet: double(docker_receipt_image: 'http://example.org/image1234', droplet_hash: 'd_haash'),
           command: 'ls -la',
           environment_json: { 'PORT': 8080, 'FOO': 'BAR' },
+          health_check_type: 'port',
+          health_check_http_endpoint: '/healthz',
+          health_check_invocation_timeout: 420,
           desired_instances: 4,
           disk_quota: 100,
           memory: 256,
