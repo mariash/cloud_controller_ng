@@ -24,6 +24,9 @@ RSpec.describe(OPI::Client) do
           name: 'name',
           guid: 'guid',
         ),
+        health_check_type: 'http',
+        health_check_http_endpoint: '/health',
+        health_check_timeout: 1,
         updated_at: Time.at(1529064800.9),
      )
     }
