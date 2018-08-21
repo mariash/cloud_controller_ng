@@ -58,7 +58,7 @@ module OPI
     private
 
     def desire_body(process)
-      timeout_ms = (process.health_check_invocation_timeout || 0) * 1000
+      timeout_ms = (process.health_check_timeout || 0) * 1000
 
       body = {
         process_guid: process_guid(process),
